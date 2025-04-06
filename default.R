@@ -189,6 +189,55 @@ plot_ly(
 
 
 
+# Step 1: Create a mapping of each column to a grouped category
+damage_map <- tibble::tibble(
+  Damage_Type = c(
+    "Engine1.Damage", "Engine2.Damage", "Engine3.Damage", "Engine4.Damage",
+    "Radome.Damage", "Windshield.Damage", "Nose.Damage",
+    "Propeller.Damage", "Wing.or.Rotor.Damage", "Fuselage.Damage",
+    "Landing.Gear.Damage", "Tail.Damage", "Lights.Damage", "Other.Damage"
+  ),
+  Category = c(
+    rep("Engine.Damage", 4),
+    rep("Front.Damage", 3),
+    "Propeller.Damage", "Wing.Rotor.Damage", "Fuselage.Damage",
+    "Landing.Gear.Damage", "Tail.Damage", "Lights.Damage", "Other.Damage"
+  )
+)
 
+# Step 2: Pivot longer and join with the category mapping
+damage_long <- df %>%
+  select(all_of(damage_map$Damage_Type)) %>%
+  pivot_longer(cols = everything(), names_to = "Damage_Type", values_to = "Value") %>%
+  filter(Value > 0) %>%  # Only actual damage cases
+  left_join(damage_map, by = "Damage_Type")
 
+# Step 3: Count totals for each Damage_Type and Category
+sunburst_data <- damage_long %>%
+  group_by(Category, Damage_Type) %>%
+  summarise(Count = n(), .groups = "drop")
+
+# Step 4: Prepare data for sunburst (include both parent and child rows)
+parent_data <- sunburst_data %>%
+  group_by(Category) %>%
+  summarise(Count = sum(Count), .groups = "drop") %>%
+  mutate(Damage_Type = Category, Parent = "Total Damage")
+
+child_data <- sunburst_data %>%
+  mutate(Parent = Category)
+
+sunburst_ready <- bind_rows(parent_data, child_data) %>%
+  select(labels = Damage_Type, parents = Parent, values = Count)
+
+# Step 5: Create the sunburst chart
+plot_ly(
+  labels = sunburst_ready$labels,
+  parents = sunburst_ready$parents,
+  values = sunburst_ready$values,
+  type = 'sunburst',
+  branchvalues = 'total'
+) %>%
+  layout(
+    title = "Aircraft Damage Sunburst Chart (Grouped by Category)"
+  )
 
