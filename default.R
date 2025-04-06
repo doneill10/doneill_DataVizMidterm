@@ -151,5 +151,44 @@ plot_ly(filtered_df,
 
 
 
+### TWO QUAN
+### -------------------------------
+
+df <- df %>%
+  mutate(
+    Total_Damage = Radome.Damage + Windshield.Damage + Nose.Damage + 
+      Engine1.Damage + Engine2.Damage + Engine3.Damage + Engine4.Damage +
+      Propeller.Damage + Wing.or.Rotor.Damage + Fuselage.Damage +
+      Landing.Gear.Damage + Tail.Damage + Lights.Damage + Other.Damage
+  )
+
+filtered_df <- df %>%
+  filter(!is.na(Speed), !is.na(Total_Damage), !is.na(Flight.Phase))
+
+plot_ly(
+  data = filtered_df,
+  x = ~Speed,
+  y = ~Total_Damage,
+  color = ~Flight.Phase,
+  type = 'scatter',
+  mode = 'markers',
+  marker = list(size = 6, opacity = 0.7)
+) %>%
+  layout(
+    title = "Total Damage vs Speed Colored by Flight Phase",
+    xaxis = list(title = "Speed", range = c(0,520)),
+    yaxis = list(title = "Total Damage"),
+    legend = list(title = list(text = "<b>Flight Phase</b>")),
+    margin = list(t = 80, b = 80, l = 80, r = 80)
+  )
+
+
+
+
+
+
+
+
+
 
 
