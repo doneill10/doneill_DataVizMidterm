@@ -114,12 +114,40 @@ plot_ly(summary_df,
 
 
 
+### ONE CATE. & ONE QUAN
+### -------------------------------
 
+top_operators <- df %>%
+  count(Operator, sort = TRUE) %>%
+  slice_head(n = 10) %>%
+  pull(Operator)
 
+filtered_df <- df %>%
+  filter(Operator %in% top_operators, !is.na(Speed))
 
+# Moving Unknown to the end
+filtered_df$Operator <- factor(
+  filtered_df$Operator,
+  levels = c(
+    sort(setdiff(unique(filtered_df$Operator), "UNKNOWN")),
+    "UNKNOWN"
+  )
+)
 
-
-
+plot_ly(filtered_df,
+        x = ~Operator,
+        y = ~Speed,
+        type = "box",
+        boxpoints = "outliers",  # show only outlier dots
+        line = list(color = "royalblue4")  # border of the boxes
+      ) %>%
+  layout(
+    title = "Speed Distribution by Operator",
+    xaxis = list(title = "Operator", tickangle = -45),
+    yaxis = list(title = "Speed (in knots)", range = c(0, 520)),
+    margin = list(t = 80, b = 165, l = 70)
+  )
+# Note: Military has a single outlier at 2500 knots
 
 
 
