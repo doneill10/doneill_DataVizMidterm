@@ -25,7 +25,13 @@ df_cateCount$Flight.Phase <- factor(df_cateCount$Flight.Phase,
 plot_ly(data = df_cateCount,
   type = "bar",
   x = ~Flight.Phase, y = ~n,
-  color = ~Flight.Phase
+  color = ~Flight.Phase,
+  marker = list(
+    line = list(
+      color = "gray10",
+      width = 1
+    )
+  )
 ) %>%
   layout(
     title = list(text = "Flight Phase when the Strike Occurred"),
@@ -33,31 +39,38 @@ plot_ly(data = df_cateCount,
     yaxis = list(title = "Count"),
     showlegend = FALSE,
     
-  # Title was too close to the top I didn't like it
     margin = list(t = 80)
   )
 
 ### SINGLE QUAN. VAR.
 ### -------------------------------
 
+# Single Quan. Histogram
 plot_ly(data = df,
         x = ~Height,
         type = "histogram",
-        xbins = list(
-          size = 1000
+        xbins = list(size = 1000),
+        marker = list(
+          line = list(
+            color = "midnightblue",
+            width = 1
+          )
         )
 ) %>%
   layout(
-    xaxis = list(range = c(0,10000))
+    title = list(text = "Plane's Altitude Where Strike Occurred"),
+    xaxis = list(
+      range = c(-20, 10000),
+      tickvals = seq(1000, 10000, by = 1000),
+      ticktext = paste0(seq(1, 10), "k")
+    ),
+    yaxis = list(title = "Count"),
+    
+    margin = list(t = 80, b = 80, l = 70, r = 60)
   )
 
-summary(df$Speed)
-
-
-
-
-
-
+### TWO CATE. VAR.
+### -------------------------------
 
 
 
