@@ -3,6 +3,8 @@
 library(ggplot2)
 library(plotly)
 library(dplyr)
+library(tidyverse)
+library(forcats)
 
 # Data set Link: https://www.kaggle.com/datasets/faa/wildlife-strikes
 
@@ -13,6 +15,8 @@ library(dplyr)
 
 df <- read.csv("airstrike.csv")
 df[df == ""] <- NA
+
+
 
 ### SINGLE CATE. VAR.
 ### -------------------------------
@@ -42,6 +46,8 @@ plot_ly(data = df_cateCount,
     margin = list(t = 80)
   )
 
+
+
 ### SINGLE QUAN. VAR.
 ### -------------------------------
 
@@ -69,8 +75,44 @@ plot_ly(data = df,
     margin = list(t = 80, b = 80, l = 70, r = 60)
   )
 
+
+
 ### TWO CATE. VAR.
 ### -------------------------------
+
+# Changing values from binary to Yes, No or Unknown
+df$Landing.Gear.Strike <- ifelse(is.na(df$Landing.Gear.Strike), "Unknown",
+                                 ifelse(df$Landing.Gear.Strike == 1, "Yes", "No"))
+
+# Ordering the Bars
+df$Flight.Phase <- df$Flight.Phase %>%
+  fct_infreq()
+
+# New DF specifically for graphing Flight Phase vs Landing Gear Strike
+summary_df <- df %>%
+  filter(!is.na(Landing.Gear.Strike), !is.na(Flight.Phase)) %>%
+  count(Flight.Phase, Landing.Gear.Strike)
+
+plot_ly(summary_df,
+        x = ~Flight.Phase,
+        y = ~n,
+        color = ~Landing.Gear.Strike,
+        type = "bar",
+        marker = list(
+          line = list(
+            color = "gray10",
+            width = 1
+          )
+        )) %>%
+  layout(barmode = "group",
+         title = list(text = "If Landing Gears were Struck"),
+         xaxis = list(title = "Flight Phase", tickangle = -45),
+         yaxis = list(title = "Strike Numbers"),
+         legend = list(title = list(text = "Landing Gear Strike")),
+         margin = list(t = 80, b = 80, l = 70)
+        )
+
+
 
 
 
