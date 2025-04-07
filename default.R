@@ -4,7 +4,8 @@ library(ggplot2)
 library(plotly)
 library(dplyr)
 library(tidyverse)
-library(forcats)
+# library(forcats)
+library(fmsb)
 
 # Data set Link: https://www.kaggle.com/datasets/faa/wildlife-strikes
 
@@ -184,60 +185,69 @@ plot_ly(
 
 
 
+### SUNBURSTING IT UP!
+### Just kidding I gave up here's a Spiderweb
+### -------------------------------
+# Replace NA and blank values with "Unknown"
+df_clean <- df %>%
+  mutate(Aircraft.Type = ifelse(is.na(Aircraft.Type) | Aircraft.Type == "", "Unknown", Aircraft.Type))
 
+# Summarize part strike data by Aircraft.Type
+df_summary <- df_clean %>%
+  group_by(Aircraft.Type) %>%
+  summarise(
+    Radome = sum(Radome.Strike, na.rm = TRUE),
+    Windshield = sum(Windshield.Strike, na.rm = TRUE),
+    Nose = sum(Nose.Strike, na.rm = TRUE),
+    Engine1 = sum(Engine1.Strike, na.rm = TRUE),
+    Propeller = sum(Propeller.Strike, na.rm = TRUE),
+    Wing_or_Rotor = sum(Wing.or.Rotor.Strike, na.rm = TRUE),
+    Fuselage = sum(Fuselage.Strike, na.rm = TRUE),
+    Landing_Gear = sum(Landing.Gear.Strike, na.rm = TRUE),
+    Tail = sum(Tail.Strike, na.rm = TRUE),
+    Lights = sum(Lights.Strike, na.rm = TRUE),
+    Other = sum(Other.Strike, na.rm = TRUE)
+  ) %>%
+  arrange(desc(rowSums(across(where(is.numeric)))))
 
+# Select top aircraft types to visualize
+top_types <- head(df_summary, 3)
+actual_types <- as.character(top_types$Aircraft.Type)
 
+# Normalize each aircraft type's values to proportions
+radar_data <- top_types[, -1]
+radar_data <- as.data.frame(t(apply(radar_data, 1, function(x) x / sum(x))))
 
-
-# Step 1: Create a mapping of each column to a grouped category
-damage_map <- tibble::tibble(
-  Damage_Type = c(
-    "Engine1.Damage", "Engine2.Damage", "Engine3.Damage", "Engine4.Damage",
-    "Radome.Damage", "Windshield.Damage", "Nose.Damage",
-    "Propeller.Damage", "Wing.or.Rotor.Damage", "Fuselage.Damage",
-    "Landing.Gear.Damage", "Tail.Damage", "Lights.Damage", "Other.Damage"
-  ),
-  Category = c(
-    rep("Engine.Damage", 4),
-    rep("Front.Damage", 3),
-    "Propeller.Damage", "Wing.Rotor.Damage", "Fuselage.Damage",
-    "Landing.Gear.Damage", "Tail.Damage", "Lights.Damage", "Other.Damage"
-  )
+# Add max and min rows for radar chart (needed by fmsb)
+radar_data <- rbind(
+  rep(1, ncol(radar_data)),  # Max values
+  rep(0, ncol(radar_data)),  # Min values
+  radar_data
 )
 
-# Step 2: Pivot longer and join with the category mapping
-damage_long <- df %>%
-  select(all_of(damage_map$Damage_Type)) %>%
-  pivot_longer(cols = everything(), names_to = "Damage_Type", values_to = "Value") %>%
-  filter(Value > 0) %>%  # Only actual damage cases
-  left_join(damage_map, by = "Damage_Type")
+# Assign row names: Max, Min, and actual aircraft type names
+rownames(radar_data) <- c("Max", "Min", actual_types)
 
-# Step 3: Count totals for each Damage_Type and Category
-sunburst_data <- damage_long %>%
-  group_by(Category, Damage_Type) %>%
-  summarise(Count = n(), .groups = "drop")
+# Define colors for the chart lines
+colors <- c("black", "red", "green")
 
-# Step 4: Prepare data for sunburst (include both parent and child rows)
-parent_data <- sunburst_data %>%
-  group_by(Category) %>%
-  summarise(Count = sum(Count), .groups = "drop") %>%
-  mutate(Damage_Type = Category, Parent = "Total Damage")
+# Create the radar chart
+radarchart(radar_data,
+           axistype = 1,
+           title = "Birdstrike Locations by Aircraft Type",
+           pcol = colors, plty = 1, plwd = 2,
+           cglcol = "grey", cglty = 1, axislabcol = "grey")
 
-child_data <- sunburst_data %>%
-  mutate(Parent = Category)
+# Add a legend with correct labels
+legend("topright", legend = actual_types, col = colors, lty = 1, lwd = 2, bty = "n")
 
-sunburst_ready <- bind_rows(parent_data, child_data) %>%
-  select(labels = Damage_Type, parents = Parent, values = Count)
 
-# Step 5: Create the sunburst chart
-plot_ly(
-  labels = sunburst_ready$labels,
-  parents = sunburst_ready$parents,
-  values = sunburst_ready$values,
-  type = 'sunburst',
-  branchvalues = 'total'
-) %>%
-  layout(
-    title = "Aircraft Damage Sunburst Chart (Grouped by Category)"
-  )
+
+
+
+
+
+
+
+
 
