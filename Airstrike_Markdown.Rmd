@@ -1,0 +1,298 @@
+---
+title: "Wildlife Strike Markdown Report"
+author: "Destiny O'Neill"
+date: "2025-04-07"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+# Necessities
+library(ggplot2)
+library(plotly)
+library(dplyr)
+library(tidyverse)
+library(forcats)
+library(fmsb)
+```
+
+```{r, include=FALSE}
+### Data Set stuff
+### -------------------------------
+
+df <- read.csv("airstrike.csv")
+df[df == ""] <- NA
+```
+
+## Single Categorical Variable: Flight Phase count
+```{r}
+
+# Data Variable Manipulation for Plotting
+df_cateCount <- df %>% count(Flight.Phase)
+df_cateCount$Flight.Phase <- factor(df_cateCount$Flight.Phase, 
+                                    levels = df_cateCount$Flight.Phase[order(-df_cateCount$n)])
+# Single Cate. Bar Graph
+plot_ly(data = df_cateCount,
+  type = "bar",
+  x = ~Flight.Phase, y = ~n,
+  color = ~Flight.Phase,
+  marker = list(
+    line = list(
+      color = "gray10",
+      width = 1
+    )
+  )
+) %>%
+  layout(
+    title = list(text = "Flight Phase when the Strike Occurred"),
+    xaxis = list(title = "Flight Phase"),
+    yaxis = list(title = "Count"),
+    showlegend = FALSE,
+    
+    margin = list(t = 80)
+  )
+
+```
+
+- Mostly happening when a plane is Approaching the tarmac, where the plane is low and going over a large stretch of land where wildlife may be roosting.
+Other prevalent cases are other low-altitude phases where, specifically, the engine is still on.    
+
+<hr>
+
+## Single Quantitative Variable: Height of Incident
+
+```{r}
+
+# Single Quan. Histogram
+plot_ly(data = df,
+        x = ~Height,
+        type = "histogram",
+        xbins = list(size = 500),
+        marker = list(
+          line = list(
+            color = "midnightblue",
+            width = 1
+          )
+        )
+) %>%
+  layout(
+    title = list(text = "Plane's Altitude Where Strike Occurred"),
+    xaxis = list(
+      range = c(-20, 10000),
+      tickvals = seq(1000, 10000, by = 1000),
+      ticktext = paste0(seq(1, 10), "k")
+    ),
+    yaxis = list(title = "Count"),
+    
+    margin = list(t = 80, b = 80, l = 70, r = 60)
+  )
+
+```
+
+- Mostly nearer to the ground, which supports the previous graph where the phases usually affected are the low altitude ones. Note! There is an extreme outlier where there was a Wildlife Strike at an altitude of 2500 ft.    
+
+<hr>
+
+## Two Categorical Variables: Landing Gear Strike vs Flight Phase
+
+```{r}
+
+# Changing values from binary to Yes, No or Unknown
+df$Landing.Gear.Strike <- ifelse(is.na(df$Landing.Gear.Strike), "Unknown",
+                                 ifelse(df$Landing.Gear.Strike == 1, "Yes", "No"))
+
+# Ordering the Bars
+df$Flight.Phase <- df$Flight.Phase %>%
+  fct_infreq()
+
+# New DF specifically for graphing Flight Phase vs Landing Gear Strike
+summary_df <- df %>%
+  filter(!is.na(Landing.Gear.Strike), !is.na(Flight.Phase)) %>%
+  count(Flight.Phase, Landing.Gear.Strike)
+
+plot_ly(summary_df,
+        x = ~Flight.Phase,
+        y = ~n,
+        color = ~Landing.Gear.Strike,
+        type = "bar",
+        marker = list(
+          line = list(
+            color = "gray10",
+            width = 1
+          )
+        )) %>%
+  layout(barmode = "group",
+         title = list(text = "If Landing Gears were Struck"),
+         xaxis = list(title = "Flight Phase", tickangle = -45),
+         yaxis = list(title = "Strike Numbers"),
+         legend = list(title = list(text = "Landing Gear Strike")),
+         margin = list(t = 80, b = 80, l = 70)
+        )
+
+```
+
+- The data set is very particular in reporting which specific part(s) of the airplane was affected by the Wildlife Strike, so I took a look to see how often they were hit and when, as they’re quite important for a successful flight. The proportion of struck Landing Gears vs Not is quite low - which is good - but it is interesting to note that there is at least one incident for every phase of flight. It’s also interesting to note that there’s an obvious proportional difference between Approach vs Landing Roll.
+
+<hr>
+
+## One Categorical & One Quantitative Variable: Operators & their Flight Speed
+
+```{r}
+
+top_operators <- df %>%
+  count(Operator, sort = TRUE) %>%
+  slice_head(n = 10) %>%
+  pull(Operator)
+
+filtered_df <- df %>%
+  filter(Operator %in% top_operators, !is.na(Speed))
+
+# Moving Unknown to the end
+filtered_df$Operator <- factor(
+  filtered_df$Operator,
+  levels = c(
+    sort(setdiff(unique(filtered_df$Operator), "UNKNOWN")),
+    "UNKNOWN"
+  )
+)
+
+plot_ly(filtered_df,
+        x = ~Operator,
+        y = ~Speed,
+        type = "box",
+        boxpoints = "outliers",  # show only outlier dots
+        line = list(color = "royalblue4")  # border of the boxes
+      ) %>%
+  layout(
+    title = "Speed Distribution by Operator",
+    xaxis = list(title = "Operator", tickangle = -45),
+    yaxis = list(title = "Speed (in knots)", range = c(0, 520)),
+    margin = list(t = 80, b = 165, l = 70)
+  )
+
+```
+
+- The chart shows aircraft speeds during bird strikes for the top 10 operators—like big airlines, cargo companies, and military flights. FedEx and UPS flew the fastest on average (over 150 knots), with a wide range of speeds, which fits their fast-paced schedules. Military flights had the biggest speed range, even hitting extreme speeds like 2500 knots during training missions. In contrast, commercial airlines like American and Delta had more consistent speeds, usually between 140–160 knots, showing their more predictable flight patterns that help reduce risk.
+
+<hr>
+
+## Two Quantitative Variable: Damage Score & Speed
+
+```{r}
+
+df <- df %>%
+  mutate(
+    Total_Damage = Radome.Damage + Windshield.Damage + Nose.Damage + 
+      Engine1.Damage + Engine2.Damage + Engine3.Damage + Engine4.Damage +
+      Propeller.Damage + Wing.or.Rotor.Damage + Fuselage.Damage +
+      Landing.Gear.Damage + Tail.Damage + Lights.Damage + Other.Damage
+  )
+
+filtered_df <- df %>%
+  filter(!is.na(Speed), !is.na(Total_Damage), !is.na(Flight.Phase))
+
+plot_ly(
+  data = filtered_df,
+  x = ~Speed,
+  y = ~Total_Damage,
+  color = ~Flight.Phase,
+  type = 'scatter',
+  mode = 'markers',
+  marker = list(size = 6, opacity = 0.7)
+) %>%
+  layout(
+    title = "Total Damage vs Speed Colored by Flight Phase",
+    xaxis = list(title = "Speed", range = c(0,520)),
+    yaxis = list(title = "Total Damage"),
+    legend = list(title = list(text = "<b>Flight Phase</b>")),
+    margin = list(t = 80, b = 80, l = 80, r = 80)
+  )
+
+```
+
+
+- This scatterplot shows how bird strike damage relates to aircraft speed, with colors indicating different phases of flight. Most incidents caused low damage (scores between 0 and 2) and occurred at speeds below 250 knots, which aligns with slower flight phases like takeoff and landing, when birds are more commonly encountered. More serious damage (score 5 and above) tends to happen between 100 and 250 knots—critical speeds during takeoff, climb, and approach, where impact forces are higher. Interestingly, a few strikes even occurred at very low speeds, including while parked or taxiing, showing that damage can still happen even when aircraft aren’t moving much.
+
+
+<hr>
+
+## Spiderweb Graph
+
+```{r}
+
+# Resetting the DF for this one in particular
+df <- read.csv("airstrike.csv")
+df[df == ""] <- NA
+
+# Replace NA and blank values with "Unknown"
+df_clean <- df %>%
+  mutate(Aircraft.Type = ifelse(is.na(Aircraft.Type) | Aircraft.Type == "", "Unknown", Aircraft.Type))
+
+# Summarize part strike data by Aircraft.Type
+df_summary <- df_clean %>%
+  group_by(Aircraft.Type) %>%
+  summarise(
+    Radome = sum(Radome.Strike, na.rm = TRUE),
+    Windshield = sum(Windshield.Strike, na.rm = TRUE),
+    Nose = sum(Nose.Strike, na.rm = TRUE),
+    Engine = sum(Engine1.Strike, na.rm = TRUE),
+    "Wing Rotor" = sum(Wing.or.Rotor.Strike, na.rm = TRUE),
+    Propeller = sum(Propeller.Strike, na.rm = TRUE),
+    Fuselage = sum(Fuselage.Strike, na.rm = TRUE),
+    "Landing Gear" = sum(Landing.Gear.Strike, na.rm = TRUE),
+    Tail = sum(Tail.Strike, na.rm = TRUE),
+    Lights = sum(Lights.Strike, na.rm = TRUE),
+    Other = sum(Other.Strike, na.rm = TRUE)
+  ) %>%
+  arrange(desc(rowSums(across(where(is.numeric)))))
+
+# Select top aircraft types to visualize
+top_types <- head(df_summary, 3)
+actual_types <- as.character(top_types$Aircraft.Type)
+
+# Normalize each aircraft type's values to proportions
+radar_data <- top_types[, -1]
+radar_data <- as.data.frame(t(apply(radar_data, 1, function(x) x / sum(x))))
+
+# Add max and min rows for radar chart (needed by fmsb)
+radar_data <- rbind(
+  rep(1, ncol(radar_data)),  # Max values
+  rep(0, ncol(radar_data)),  # Min values
+  radar_data
+)
+
+# Assign row names: Max, Min, and actual aircraft type names
+rownames(radar_data) <- c("Max", "Min", actual_types)
+
+# Define colors for the chart lines
+colors <- c("black", "red", "green")
+
+# Create the radar chart
+radarchart(radar_data,
+           axistype = 1,
+           title = "Birdstrike Locations by Aircraft Type",
+           pcol = colors, plty = 1, plwd = 2,
+           cglcol = "grey", cglty = 1, axislabcol = "grey")
+
+# Add a legend with correct labels
+legend("topright", legend = actual_types, col = colors, lty = 1, lwd = 2, bty = "n")
+```
+
+- This radar chart shows where birdstrikes happen most often on three different aircraft types, including ones labeled as "Unknown." Type A (black) has a fairly even spread of strikes, with a few more on the nose, windshield, and radome. Type B (red) gets hit more often in the windshield and nose, meaning birds are more likely to strike the front of this aircraft. The "Unknown" type (green) has more strikes on the lights and other areas, which might mean these aircraft are different in design or reporting. Overall, the chart shows that different aircraft types tend to get hit in different places.    
+- Note: Type A and Type B aircraft refers to designations of approach speed allowed. Type A aircraft are slower, approaching at or below 90 knots. Type B are allowed to approach faster, usually between 91 - 120 knots. There are other categories who are significantly faster, but their numbers are low so they've been merged together to keep the graph less busy.    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
