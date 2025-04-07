@@ -4,7 +4,7 @@ library(ggplot2)
 library(plotly)
 library(dplyr)
 library(tidyverse)
-# library(forcats)
+library(forcats)
 library(fmsb)
 
 # Data set Link: https://www.kaggle.com/datasets/faa/wildlife-strikes
@@ -47,6 +47,11 @@ plot_ly(data = df_cateCount,
     margin = list(t = 80)
   )
 
+# Mostly happening when a plane is Approaching the tarmac, where the plane is 
+# low and going over a large stretch of land where wildlife may be roosting.
+
+# Other prevalent cases are other low-altitude phases where, 
+# specifically, the engine is still on.
 
 
 ### SINGLE QUAN. VAR.
@@ -56,7 +61,7 @@ plot_ly(data = df_cateCount,
 plot_ly(data = df,
         x = ~Height,
         type = "histogram",
-        xbins = list(size = 1000),
+        xbins = list(size = 500),
         marker = list(
           line = list(
             color = "midnightblue",
@@ -75,8 +80,11 @@ plot_ly(data = df,
     
     margin = list(t = 80, b = 80, l = 70, r = 60)
   )
+# Mostly nearer to the ground, which supports the previous graph where 
+# the phases usually affected are the low altitude ones.
 
-
+# Note! There is an extreme outlier where there was a Wildlife Strike 
+# at an altitude of 2500 ft.
 
 ### TWO CATE. VAR.
 ### -------------------------------
@@ -113,7 +121,18 @@ plot_ly(summary_df,
          margin = list(t = 80, b = 80, l = 70)
         )
 
+# The dataset is very particular in reporting which specific part(s) of the 
+# airplane was affected by the Wildlife Strike, so I took a look to see how 
+# often they were hit and when, as they’re quite important for a 
+#successful flight.
 
+# The proportion of struck Landing Gears vs Not is quite low - which is good - 
+# but it is interesting to note that there is at least one incident for every 
+# phase of flight, even the phases where the gears should have been put away.
+
+# It’s also interesting to note that there’s an obvious proportional 
+# difference between Approach vs Landing Roll, which notes that planes do run 
+# over a number of wildlife.
 
 ### ONE CATE. & ONE QUAN
 ### -------------------------------
@@ -148,9 +167,13 @@ plot_ly(filtered_df,
     yaxis = list(title = "Speed (in knots)", range = c(0, 520)),
     margin = list(t = 80, b = 165, l = 70)
   )
-# Note: Military has a single outlier at 2500 knots
 
+# Everyone is generally within the same range of speed, of around 150 knots, 
+# however the airlines that deal with packages are consistently faster than 
+# regular commercial airlines.
 
+#The Military is an interesting case with the most extreme outliers, with 
+# even one at 2500 knots - not seen on the graph.
 
 ### TWO QUAN
 ### -------------------------------
@@ -225,20 +248,20 @@ radar_data <- rbind(
   radar_data
 )
 
-# Assign row names: Max, Min, and actual aircraft type names
+# Assign row names
 rownames(radar_data) <- c("Max", "Min", actual_types)
 
-# Define colors for the chart lines
+# Line colors
 colors <- c("black", "red", "green")
 
-# Create the radar chart
+# Radar chart
 radarchart(radar_data,
            axistype = 1,
            title = "Birdstrike Locations by Aircraft Type",
            pcol = colors, plty = 1, plwd = 2,
            cglcol = "grey", cglty = 1, axislabcol = "grey")
 
-# Add a legend with correct labels
+# Add legend labels
 legend("topright", legend = actual_types, col = colors, lty = 1, lwd = 2, bty = "n")
 
 
